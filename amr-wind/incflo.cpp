@@ -108,7 +108,7 @@ void incflo::init_amr_wind_modules()
     }
 
     m_sim.pde_manager().fillpatch_state_fields(m_time.current_time());
-    m_sim.post_manager().post_init_actions();
+    //m_sim.post_manager().post_init_actions();
 }
 
 /** Initialize flow-field before performing time-integration.
@@ -244,10 +244,16 @@ void incflo::post_advance_work()
  */
 void incflo::Evolve()
 {
+    static int currentAssentStep = 0;
     BL_PROFILE("amr-wind::incflo::Evolve()");
 
     while (m_time.new_timestep()) {
         amrex::Real time0 = amrex::ParallelDescriptor::second();
+
+    if(currentAssentStep == 10)
+    {
+       m_sim.post_manager().post_init_actions();
+    }
 
         regrid_and_update();
         pre_advance_stage1();
@@ -258,7 +264,11 @@ void incflo::Evolve()
         advance();
         amrex::Print() << std::endl;
         amrex::Real time2 = amrex::ParallelDescriptor::second();
+
+     if(currentAssentStep >= 10)
+     {
         post_advance_work();
+     }
         amrex::Real time3 = amrex::ParallelDescriptor::second();
 
         amrex::Print() << "WallClockTime: " << m_time.time_index()
@@ -273,6 +283,7 @@ void incflo::Evolve()
                               (time2 - time1) /
                               static_cast<amrex::Real>(m_cell_count)
                        << std::endl;
+        currentAssentStep++;
     }
     amrex::Print() << "\n======================================================"
                       "========================\n"

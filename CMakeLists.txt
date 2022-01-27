@@ -39,6 +39,8 @@ option(AMR_WIND_ENABLE_MASA "Enable MASA library" OFF)
 option(AMR_WIND_ENABLE_HYPRE "Enable HYPRE integration" OFF)
 option(AMR_WIND_ENABLE_OPENFAST "Enable OpenFAST integration" OFF)
 option(AMR_WIND_ENABLE_ASCENT "Enable Ascent visualization library" OFF)
+option(AMR_WIND_ENABLE_FIDES "Enable Fides" OFF)
+option(AMR_WIND_ENABLE_ADIOS2 "Enable ADIOS2" OFF)
 
 #Options for C++
 set(CMAKE_CXX_STANDARD 14)
@@ -69,6 +71,60 @@ if(AMR_WIND_TEST_WITH_FCOMPARE)
   set(AMR_WIND_ENABLE_FCOMPARE ON)
 endif()
 
+#Create target names
+set(amr_wind_lib_name "amrwind_obj")
+set(amr_wind_exe_name "amr_wind")
+set(amr_wind_unit_test_exe_name "${amr_wind_exe_name}_unit_tests")
+set(aw_api_lib "amrwind_api")
+
+#Create main target executable
+add_library(${amr_wind_lib_name} OBJECT)
+add_library(${aw_api_lib})
+add_executable(${amr_wind_exe_name})
+
+
+if(AMR_WIND_ENABLE_ASCENT)
+  set(CMAKE_PREFIX_PATH ${ASCENT_DIR} ${CMAKE_PREFIX_PATH})
+  find_package(Ascent QUIET REQUIRED)
+  if (Ascent_FOUND)
+    message(STATUS "Found Ascent = ${ASCENT_INCLUDE_DIRS}")
+  endif()
+  if (AMR_WIND_ENABLE_MPI)
+    target_link_libraries(${amr_wind_lib_name} PUBLIC ascent::ascent_mpi)
+  else()
+    target_link_libraries(${amr_wind_lib_name} PUBLIC ascent::ascent)
+  endif()
+  target_compile_definitions(${amr_wind_lib_name} PRIVATE AMR_WIND_USE_ASCENT)
+endif()
+
+if(AMR_WIND_ENABLE_ADIOS2)
+    set(CMAKE_PREFIX_PATH ${ADIOS2_DIR} ${CMAKE_PREFIX_PATH})
+    if(NOT ADIOS2_DIR)
+        MESSAGE(FATAL_ERROR "ADIOS2 support needs explicit ADIOS2_DIR")
+    endif()
+
+    MESSAGE(STATUS "Looking for ADIOS2 using ADIOS2_DIR = ${ADIOS2_DIR}")
+    find_package(ADIOS2 QUIET REQUIRED)
+    if(NOT ADIOS2_FOUND)
+        message(FATAL_ERROR "ADIOS2_DIR is not a path to a valid ADIOS2 install")
+    endif()
+    message(STATUS "ADIOS2 Libraries ${ADIOS2_LIBRARIES}")
+    target_compile_definitions(${amr_wind_lib_name} PRIVATE AMR_WIND_USE_ADIOS2)
+    target_link_libraries(${amr_wind_lib_name} PUBLIC ${ADIOS2_LIBRARIES})
+endif()
+
+if(AMR_WIND_ENABLE_FIDES)
+  if (NOT Fides_DIR)
+    message(FATAL_ERROR "FIDES requies an explicit 'FIDES_DIR'")
+  endif()
+
+  find_package(Fides QUIET REQUIRED)
+  message(STATUS "Fides found")
+  set(Fides_LIBRARIES fides)
+  message(STATUS "Fides Libraries ${Fides_LIBRARIES}")
+  target_compile_definitions(${amr_wind_lib_name} PRIVATE AMR_WIND_USE_FIDES)
+endif()
+
 
 ########################### AMReX #####################################
 init_amrex()
@@ -89,16 +145,7 @@ message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 include(set_rpath)
 
-#Create target names
-set(amr_wind_lib_name "amrwind_obj")
-set(amr_wind_exe_name "amr_wind")
-set(amr_wind_unit_test_exe_name "${amr_wind_exe_name}_unit_tests")
-set(aw_api_lib "amrwind_api")
 
-#Create main target executable
-add_library(${amr_wind_lib_name} OBJECT)
-add_library(${aw_api_lib})
-add_executable(${amr_wind_exe_name})
 
 init_code_checks()
 if(CLANG_TIDY_EXE)
@@ -139,19 +186,6 @@ if (AMR_WIND_ENABLE_OPENFAST)
   target_link_libraries(${amr_wind_lib_name} PUBLIC ${OpenFAST_LIBRARIES})
 endif()
 
-if(AMR_WIND_ENABLE_ASCENT)
-  set(CMAKE_PREFIX_PATH ${ASCENT_DIR} ${CMAKE_PREFIX_PATH})
-  find_package(Ascent QUIET REQUIRED)
-  if (Ascent_FOUND)
-    message(STATUS "Found Ascent = ${ASCENT_INCLUDE_DIRS}")
-  endif()
-  if (AMR_WIND_ENABLE_MPI)
-    target_link_libraries(${amr_wind_lib_name} PUBLIC ascent::ascent_mpi)
-  else()
-    target_link_libraries(${amr_wind_lib_name} PUBLIC ascent::ascent)
-  endif()
-  target_compile_definitions(${amr_wind_lib_name} PRIVATE AMR_WIND_USE_ASCENT)
-endif()
 
 #Build amr-wind and link to amrex library
 generate_version_info()
