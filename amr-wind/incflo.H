@@ -160,6 +160,10 @@ private:
     // Be verbose?
     int m_verbose = 0;
 
+    // Hack to make ascent work with vtkh and adios
+    amrex::Vector<std::string> output_type;
+    int m_out_start{1};
+
     // Member variables for initial conditions
     int m_probtype = 0;
 

@@ -43,6 +43,7 @@ private:
     amrex::Vector<Field*> m_fields;
 
     int m_out_freq{1};
+    int m_out_start{1};
 };
 
 } // namespace ascent_int

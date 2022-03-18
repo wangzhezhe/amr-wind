@@ -108,7 +108,13 @@ void incflo::init_amr_wind_modules()
     }
 
     m_sim.pde_manager().fillpatch_state_fields(m_time.current_time());
-    //m_sim.post_manager().post_init_actions();
+
+    // Hack around crash when using adios2 vs vtkh through ascent
+    amrex::ParmParse pp("ascent");
+    pp.getarr("output_type", output_type);
+    pp.query("output_start_step", m_out_start);
+    if(output_type[0] == "ascent")
+        m_sim.post_manager().post_init_actions();
 }
 
 /** Initialize flow-field before performing time-integration.
@@ -244,15 +250,18 @@ void incflo::post_advance_work()
  */
 void incflo::Evolve()
 {
-    static int currentAssentStep = 0;
+    static int currentAscentStep = 0;
     BL_PROFILE("amr-wind::incflo::Evolve()");
 
     while (m_time.new_timestep()) {
         amrex::Real time0 = amrex::ParallelDescriptor::second();
 
-    if(currentAssentStep == 10)
+    if(output_type[0] == "adios2")
     {
-       m_sim.post_manager().post_init_actions();
+        if(currentAscentStep == m_out_start)
+        {
+           m_sim.post_manager().post_init_actions();
+        }
     }
 
         regrid_and_update();
@@ -265,10 +274,18 @@ void incflo::Evolve()
         amrex::Print() << std::endl;
         amrex::Real time2 = amrex::ParallelDescriptor::second();
 
-     if(currentAssentStep >= 10)
+     if(output_type[0] == "adios2")
      {
-        post_advance_work();
+         if(currentAscentStep >= m_out_start)
+         {
+            post_advance_work();
+         }
      }
+     else
+     {
+         post_advance_work();
+     }
+
         amrex::Real time3 = amrex::ParallelDescriptor::second();
 
         amrex::Print() << "WallClockTime: " << m_time.time_index()
@@ -283,7 +300,7 @@ void incflo::Evolve()
                               (time2 - time1) /
                               static_cast<amrex::Real>(m_cell_count)
                        << std::endl;
-        currentAssentStep++;
+        currentAscentStep++;
     }
     amrex::Print() << "\n======================================================"
                       "========================\n"

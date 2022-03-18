@@ -24,11 +24,14 @@ void AscentPostProcess::initialize()
     BL_PROFILE("amr-wind::AscentPostProcess::initialize");
 
     amrex::Vector<std::string> field_names;
+    amrex::Vector<std::string> output_type;
 
     {
         amrex::ParmParse pp("ascent");
         pp.getarr("fields", field_names);
         pp.query("output_frequency", m_out_freq);
+        pp.query("output_start_step", m_out_start);
+        pp.getarr("output_type", output_type);
     }
 
     // Process field information
@@ -53,8 +56,12 @@ void AscentPostProcess::post_advance_work()
 
     const auto& time = m_sim.time();
     const int tidx = time.time_index();
+
+    // output only after the given number of steps
+    if (!(tidx > m_out_start)) return;
+
     // Output only on given frequency
-    if (!(tidx % m_out_freq == 0)) return;
+    //if (!(tidx % m_out_freq == 0)) return;
 
     amrex::Vector<int> istep(
         m_sim.mesh().finestLevel() + 1, m_sim.time().time_index());
