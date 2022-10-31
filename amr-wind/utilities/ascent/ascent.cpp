@@ -61,7 +61,7 @@ void AscentPostProcess::post_advance_work()
     if (!(tidx > m_out_start)) return;
 
     // Output only on given frequency
-    //if (!(tidx % m_out_freq == 0)) return;
+    if (!(tidx % m_out_freq == 0)) return;
 
     amrex::Vector<int> istep(
         m_sim.mesh().finestLevel() + 1, m_sim.time().time_index());
